@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bússola: currículo sob medida para cada vaga</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+:root{--ink:#101433;--bg:#eceaff;--v:#6c4cff;--y:#ffd84d;--p:#ff5c8a;--m:#3ddc97;--mut:#5f6490}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 "DM Sans",system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+h1,h2,h3{font-family:Sora,system-ui,sans-serif;margin:0;letter-spacing:-.02em}
+.wrap{max-width:1180px;margin:0 auto;padding:24px clamp(16px,4vw,40px) 70px}
+.logo{display:flex;align-items:center;gap:10px;font:800 1.4rem Sora}
+.logo svg{width:38px;height:38px}
+.hero{padding:34px 0 26px}
+.hero h1{font-size:clamp(2.2rem,6vw,4rem);line-height:1.05;max-width:16ch}
+.hero h1 span{background:linear-gradient(transparent 58%,var(--y) 58%)}
+.hero p{max-width:56ch;color:var(--mut);margin:14px 0 0;font-size:1.08rem}
+.grid{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:26px;align-items:start}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:#fff;border:2px solid var(--ink);border-radius:14px;box-shadow:5px 5px 0 var(--ink);padding:18px;margin-bottom:20px}
+.step{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.step b{width:30px;height:30px;border-radius:50%;background:var(--y);border:2px solid var(--ink);display:grid;place-items:center;font:800 .95rem Sora}
+.drop{display:block;border:2px dashed var(--ink);border-radius:12px;padding:26px 14px;text-align:center;cursor:pointer;background:#f6f4ff}
+.drop.on,.drop:hover{background:var(--y)}
+.drop input{display:none}
+textarea{width:100%;min-height:210px;border:2px solid var(--ink);border-radius:10px;padding:10px 12px;font:inherit;resize:vertical;background:#fff;color:var(--ink)}
+.btn{background:var(--v);color:#fff;border:2px solid var(--ink);border-radius:10px;padding:12px 20px;font:700 1rem "DM Sans";cursor:pointer;text-decoration:none;display:inline-block}
+.btn.alt{background:var(--y);color:var(--ink)}
+.btn.full{width:100%;font-size:1.05rem}
+.btn:disabled{opacity:.55;cursor:wait}
+button:focus-visible,textarea:focus-visible,label:focus-within{outline:3px solid var(--p);outline-offset:2px}
+.mut{color:var(--mut);font-size:.92rem}
+.err{background:#ffe1e8;border:2px solid var(--p);border-radius:10px;padding:10px 12px;margin-top:12px;overflow-wrap:anywhere}
+.empty{text-align:center;padding:50px 20px}
+.empty h3{font-size:1.4rem;margin-bottom:6px}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.fit{width:62px;height:62px;border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;font:800 1.3rem Sora}
+iframe{width:100%;height:640px;border:2px solid var(--ink);border-radius:10px;background:#fff}
+ul{margin:6px 0 0;padding-left:20px}
+li{margin-bottom:4px}
+.spin{display:inline-block;width:14px;height:14px;border:3px solid var(--ink);border-top-color:transparent;border-radius:50%;animation:s .8s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="logo"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="20" fill="#ffd84d" stroke="#101433" stroke-width="2"/><path d="M22 6l6 16H16z" fill="#ff5c8a"/><path d="M22 38l-6-16h12z" fill="#101433"/></svg>Bússola</div>
+<section class="hero">
+<h1>Seu currículo, <span>sob medida</span> para cada vaga.</h1>
+<p>Envie o PDF atual e cole a descrição da vaga. Em segundos você baixa um novo PDF, reescrito só com o que é verdade sobre você e com o foco no que a empresa procura.</p>
+</section>
+
+<div class="grid">
+<div>
+<section class="card">
+<div class="step"><b>1</b><h3>Seu currículo atual</h3></div>
+<label class="drop" id="drop"><input type="file" id="file" accept="application/pdf"><span id="dropt"><b>Clique ou arraste o PDF aqui</b><br><span class="mut">até 4 MB</span></span></label>
+</section>
+<section class="card">
+<div class="step"><b>2</b><h3>A vaga</h3></div>
+<label for="vaga" class="mut">Cole o texto completo: título, responsabilidades e requisitos.</label>
+<textarea id="vaga"></textarea>
+</section>
+<button class="btn full" id="go">Gerar currículo adaptado</button>
+<div id="err" class="err" hidden></div>
+</div>
+
+<div id="out">
+<section class="card empty"><h3>O resultado aparece aqui</h3><p class="mut">Você vê o PDF pronto, o que foi mudado e as lacunas que a vaga aponta no seu perfil.</p></section>
+</div>
+</div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let pdfB64="",pdfUrl="",nomeArq="curriculo-adaptado.pdf";
+
+/* ---------- upload ---------- */
+function lerArquivo(f){
+ if(!f)return;
+ if(f.type!=="application/pdf"&&!/\.pdf$/i.test(f.name))return erro("O arquivo precisa ser um PDF.");
+ if(f.size>4*1024*1024)return erro("O PDF passa de 4 MB. Exporte uma versão menor.");
+ const r=new FileReader();
+ r.onload=()=>{pdfB64=String(r.result).split(",")[1]||"";$("#dropt").innerHTML="<b>"+esc(f.name)+"</b><br><span class='mut'>PDF carregado. Clique para trocar.</span>";$("#drop").classList.add("on");erro("")};
+ r.readAsDataURL(f)}
+$("#file").onchange=e=>lerArquivo(e.target.files[0]);
+const dz=$("#drop");
+["dragover","dragenter"].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.add("on")}));
+dz.addEventListener("drop",e=>{e.preventDefault();lerArquivo(e.dataTransfer.files[0])});
+function erro(m){const e=$("#err");e.hidden=!m;e.textContent=m||""}
+
+/* ---------- geração ---------- */
+const MSG=["Lendo o seu PDF…","Entendendo o que a vaga quer…","Reescrevendo só com fatos seus…","Montando o novo PDF…"];
+$("#go").onclick=async function(){
+ const vaga=$("#vaga").value.trim(),b=this;
+ if(!pdfB64)return erro("Envie o PDF do seu currículo primeiro.");
+ if(vaga.length<40)return erro("Cole o texto completo da vaga.");
+ erro("");b.disabled=true;let i=0;const t=()=>{b.innerHTML='<span class="spin"></span>'+MSG[Math.min(i++,MSG.length-1)]};t();const iv=setInterval(t,5000);
+ try{
+  const r=await fetch("/api/adaptar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pdf:pdfB64,vaga})});
+  const d=await r.json().catch(()=>({erro:"Resposta inválida do servidor (código "+r.status+")."}));
+  if(!r.ok)throw new Error(d.erro||"Erro "+r.status);
+  const bytes=await montarPdf(d.cv);
+  if(pdfUrl)URL.revokeObjectURL(pdfUrl);
+  pdfUrl=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
+  nomeArq="curriculo-"+((d.cv.nome||"adaptado").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""))+".pdf";
+  mostrar(d);
+ }catch(e){erro("Não deu certo: "+(e.message||e))}
+ clearInterval(iv);b.disabled=false;b.textContent="Gerar currículo adaptado"};
+
+function mostrar(d){
+ const c=d.cv,fit=Number(c.fit),cor=fit>=70?"var(--m)":fit>=45?"var(--y)":"var(--p)";
+ const li=a=>"<ul>"+(a||[]).map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
+ $("#out").innerHTML=`<section class="card"><div class="top">${isFinite(fit)?`<div class="fit" style="background:${cor}">${fit}</div><div><b>Fit com a vaga</b><div class="mut">avaliação honesta do seu perfil atual</div></div>`:""}<a class="btn alt" style="margin-left:auto" href="${pdfUrl}" download="${nomeArq}">Baixar PDF</a></div><iframe src="${pdfUrl}" title="Prévia do currículo adaptado"></iframe></section>
+ <section class="card"><h3>O que mudei e por quê</h3>${li(c.mudancas)}</section>
+ <section class="card"><h3>Lacunas honestas para esta vaga</h3><p class="mut">O que a vaga pede e não está no seu currículo. Não entrou no PDF.</p><ul>${(c.lacunas||[]).map(l=>"<li><b>"+esc(l.item)+":</b> "+esc(l.como_fechar)+"</li>").join("")}</ul></section>`;
+ $("#out").scrollIntoView({behavior:"smooth",block:"start"})}
+
+/* ---------- PDF (pdf-lib, no navegador) ---------- */
+const clean=t=>String(t??"").replace(/[→⟶]/g,"->").replace(/≥/g,">=").replace(/≤/g,"<=").replace(/[^\x20-\x7E\u00A0-\u00FF\u2022\u2013\u2014\u2018\u2019\u201C\u201D\u2026\u20AC]/g," ").replace(/\s+/g," ").trim();
+function wrap(t,f,s,w){const out=[];let l="";for(const p of clean(t).split(" ")){const n=l?l+" "+p:p;if(f.widthOfTextAtSize(n,s)>w&&l){out.push(l);l=p}else l=n}if(l)out.push(l);return out}
+async function montarPdf(c){
+ const {PDFDocument,StandardFonts,rgb}=PDFLib,doc=await PDFDocument.create();
+ const R=await doc.embedFont(StandardFonts.Helvetica),B=await doc.embedFont(StandardFonts.HelveticaBold);
+ const W=595.28,H=841.89,M=46,CW=W-2*M,ink=rgb(.07,.08,.16),acc=rgb(.29,.2,.85),gr=rgb(.38,.4,.5);
+ let pg=doc.addPage([W,H]),y=H-M;
+ const need=h=>{if(y-h<M){pg=doc.addPage([W,H]);y=H-M}};
+ const line=(t,o={})=>{const{f=R,s=10,col=ink,x=M,w=CW,gap=3.2}=o;for(const l of wrap(t,f,s,w)){need(s+gap);y-=s;pg.drawText(l,{x,y,size:s,font:f,color:col});y-=gap}};
+ const sec=t=>{need(40);y-=10;y-=10;pg.drawText(clean(t).toUpperCase(),{x:M,y,size:10,font:B,color:acc});y-=4;pg.drawLine({start:{x:M,y},end:{x:W-M,y},thickness:.8,color:acc});y-=6};
+ const head=(l,r)=>{const rr=clean(r),rw=rr?B.widthOfTextAtSize(rr,9):0,ls=wrap(l,B,10.5,CW-rw-10);need(30);y-=10.5;if(ls[0])pg.drawText(ls[0],{x:M,y,size:10.5,font:B,color:ink});if(rr)pg.drawText(rr,{x:W-M-rw,y,size:9,font:B,color:gr});y-=3.2;ls.slice(1).forEach(x=>line(x,{f:B,s:10.5}))};
+ const bl=a=>(a||[]).forEach(b=>wrap(b,R,10,CW-14).forEach((l,i)=>{need(13);y-=10;if(i===0)pg.drawText("\u2022",{x:M+3,y,size:10,font:R,color:acc});pg.drawText(l,{x:M+14,y,size:10,font:R,color:ink});y-=3.2}));
+ const sub=t=>{if(t)line(t,{s:9.5,col:gr})};
+
+ line(c.nome||"",{f:B,s:22,gap:5});
+ line(c.headline||"",{f:B,s:11.5,col:acc,gap:4});
+ if((c.contatos||[]).length)line(c.contatos.join("   |   "),{s:9,col:gr});
+ if(c.resumo){sec("Resumo");line(c.resumo)}
+ if((c.skills||[]).length){sec("Skills");line(c.skills.join("  \u2022  "))}
+ if((c.experiencias||[]).length){sec("Experiência");c.experiencias.forEach(e=>{head([e.cargo,e.org].filter(Boolean).join(" - "),e.periodo);bl(e.bullets);y-=4})}
+ if((c.projetos||[]).length){sec("Projetos");c.projetos.forEach(p=>{head(p.nome,p.periodo);bl(p.bullets);y-=4})}
+ if((c.formacao||[]).length){sec("Formação");c.formacao.forEach(f=>{head([f.curso,f.inst].filter(Boolean).join(" - "),f.periodo);sub(f.detalhe);y-=3})}
+ (c.extras||[]).filter(x=>(x.itens||[]).length).forEach(x=>{sec(x.titulo||"Outros");bl(x.itens)});
+ if((c.idiomas||[]).length){sec("Idiomas");line(c.idiomas.join("  \u2022  "))}
+ doc.setTitle("Currículo - "+clean(c.nome));
+ return await doc.save()}
+</script>
+</body>
+</html>
