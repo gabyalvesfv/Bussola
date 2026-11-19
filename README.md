@@ -4,7 +4,11 @@ Envie o PDF do seu currículo e o texto de uma vaga. A IA (Gemini) reescreve o c
 
 ## Rodar localmente
 1. `npm install`
-2. Copie `.env.example` para `.env.local` e coloque sua chave em `GEMINI_API_KEY`
+2. Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
+```env
+GEMINI_API_KEY=cole_sua_chave_do_google_ai_studio_aqui
+GEMINI_MODEL=gemini-3.8-flash
+```
 3. `npm run dev` e abra http://localhost:3000
 
 ## Estrutura
